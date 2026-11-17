@@ -1,0 +1,50 @@
+services:
+  modbus-server:
+    build:
+      context: ./server
+    container_name: modbus-server
+    hostname: modbus-server
+    networks:
+      modbus-net:
+        ipv4_address: 172.28.0.10
+    ports:
+      - "502:502"   # exposed for debugging
+    restart: unless-stopped
+
+  modbus-master:
+    build:
+      context: ./client
+    container_name: modbus-master
+    hostname: modbus-master
+    networks:
+      modbus-net:
+        ipv4_address: 172.28.0.11
+    depends_on:
+      - modbus-server
+    restart: unless-stopped
+
+  attacker:
+    build:
+      context: ./attacker
+    container_name: attacker
+    hostname: attacker
+    networks:
+      modbus-net:
+        ipv4_address: 172.28.0.20
+    depends_on:
+      - modbus-server
+      - modbus-master
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    volumes:
+      - ./captures:/captures
+    stdin_open: true
+    tty: true
+
+networks:
+  modbus-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
